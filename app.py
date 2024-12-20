@@ -1,9 +1,7 @@
-from backend import create_app  # Import the app creation function
-from flask import Flask
+from backend import app
+from dotenv import load_dotenv
 
-
-# Create the Flask app instance by calling create_app()
-app = create_app()
+load_dotenv()
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True, host='0.0.0.0', port=5001)

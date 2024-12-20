@@ -1,45 +1,65 @@
-# backend/routes.py
-from flask import jsonify, request
-from . import db
-from .models import User
-from sqlalchemy.exc import SQLAlchemyError
+from flask import Blueprint, jsonify
+from init_db import get_db_connection
 
-# This function registers routes with the Flask app
-def init_routes(app):
-    # Home route
-    @app.route('/')
-    def home_page():
-        return "Welcome to the Flask app!"
+jokes_bp = Blueprint('jokes', __name__)
 
-    # Add user route (POST request)
-    @app.route('/add_user', methods=['POST'])
-    def add_user_entry():
-        # Get JSON data from the request
-        data = request.get_json()
-        if not data or not data.get('username') or not data.get('email'):
-            return jsonify(message="Missing fields: username and email"), 400
 
-        # Extract data from request
-        username = data['username']
-        email = data['email']
+@jokes_bp.route('/api/jokes', methods=['GET'])
+def get_jokes():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM oneliners')
+        jokes = cursor.fetchall()
 
-        # Check if user already exists
-        if User.query.filter_by(username=username).first():
-            return jsonify(message="Username already exists!"), 409
+        jokes_list = []
+        for joke in jokes:
+            jokes_list.append({
+                'number': joke[0],
+                'category': joke[1],
+                'joke': joke[2]
+            })
 
-        # Create new user
-        try:
-            new_user = User(username=username, email=email)
-            db.session.add(new_user)
-            db.session.commit()
-            return jsonify(message="User added successfully"), 201
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            return jsonify(message="Database error occurred!", error=str(e)), 500
+        return jsonify(jokes_list)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
-    # Get all users route (GET request)
-    @app.route('/users', methods=['GET'])
-    def get_users():
-        users = User.query.all()
-        user_list = [{'id': user.id, 'username': user.username, 'email': user.email} for user in users]
-        return jsonify(users=user_list)
+
+@jokes_bp.route('/api/jokes/random', methods=['GET'])
+def get_random_joke():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT TOP 1 * FROM oneliners ORDER BY NEWID()')
+        joke = cursor.fetchone()
+
+        if joke:
+            return jsonify({
+                'number': joke[0],
+                'category': joke[1],
+                'joke': joke[2]
+            })
+        return jsonify({'message': 'No jokes found'}), 404
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@jokes_bp.route('/api/jokes/random', methods=['GET'])  # Added /api prefix
+def get_random_joke():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT TOP 1 * FROM oneliners ORDER BY NEWID()')
+        joke = cursor.fetchone()
+
+        if joke:
+            return jsonify({
+                'id': joke[0],
+                'joke_text': joke[1]
+            })
+        return jsonify({'message': 'No jokes found'}), 404
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
