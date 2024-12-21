@@ -22,3 +22,5 @@ boto3~=1.35.84
 pyodbc~=5.2.0
 dnspython~=2.8.0.dev0
 botocore~=1.35.84
+requests~=2.32.3
+Kivy~=2.3.0
